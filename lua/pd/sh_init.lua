@@ -13,7 +13,7 @@ function meta:GetDamaged()
 end
 
 function meta:GetRecoveryPerOnce()
-    return self:GetMaxStrength() / PD.RecoveringTime
+    return self:GetMaxStrength() / 25
 end
 
 function meta:GetMaxStrength()
