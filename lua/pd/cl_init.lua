@@ -1,9 +1,6 @@
 CreateClientConVar("pd_cracks", 1, true, false, "Enable/Disable props' cracks")
 CreateClientConVar("pd_hud", 1, true, false, "Enable/Disable HUD of Prop Destruction")
 
-PD.Cracks = GetConVar("pd_cracks"):GetBool()
-PD.HUD = GetConVar("pd_hud"):GetBool()
-
 surface.CreateFont("pd_hud", {size = 26, weight = 300, antialias = true, extended = true, font = "Roboto Condensed"})
 surface.CreateFont("pd_hud_shadow", {size = 27, weight = 300, antialias = true, extended = true, blursize = 1.5, font = "Roboto Condensed"})
 
@@ -18,7 +15,7 @@ local function PrettyText(text, font, x, y, color, xalign, yalign)
 end
 
 hook.Add("HUDPaint", "Prop Destruction", function()
-    if not PD.HUD then
+    if not GetConVar("pd_hud"):GetBool() then
         return
     end
 
@@ -47,7 +44,7 @@ end
 
 local prop_queue = {}
 hook.Add("OnEntityCreated", "Prop Destruction", function(ent)
-    if not PD.Cracks or not ent:IsDestructible() or ent:GetMaxHealth() <= 1 then
+    if not GetConVar("pd_cracks"):GetBool() or not ent:IsDestructible() or ent:GetMaxHealth() <= 1 then
         return
     end
     
@@ -68,7 +65,7 @@ end)
 function PD.DrawCrackedModel(ent)
 	ent:DrawModel()
 
-    if not PD.Cracks or ent:Health() > ent:GetMaxHealth() / 2 then 
+    if not GetConVar("pd_cracks"):GetBool() or ent:Health() > ent:GetMaxHealth() / 2 then 
         return 
     end
 
