@@ -1,18 +1,6 @@
 CreateConVar("pd_enabled", 1, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Enable/Disable Prop Destruction")
 CreateConVar("pd_recovering", 1, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Enable/Disable props' recovering")
-CreateConVar("pd_recovering_revive", 22, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Amount of time before recovering starting")
-CreateConVar("pd_recovering_time", 25, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Amount of time spent for the prop's full recovering")
-CreateConVar("pd_recovering_delay", 2, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Amount of time before the next prop's recovery")
-CreateConVar("pd_stability_distance", 40, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "The distance after prop becomes unstable")
-CreateConVar("pd_poorstart", 0, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Enable/Disable props' spawning with 1 HP")
-
-PD.Enabled = GetConVar("pd_enabled"):GetBool()
-PD.Recovering = GetConVar("pd_recovering"):GetBool()
-PD.RecoveringTime = GetConVar("pd_recovering_time"):GetInt()
-PD.RecoveringRevive = GetConVar("pd_recovering_revive"):GetInt()
-PD.RecoveringDelay = GetConVar("pd_recovering_delay"):GetInt()
-PD.StabilityDistance = GetConVar("pd_stability_distance"):GetInt()
-PD.Poor = GetConVar("pd_poorstart"):GetBool()
+CreateConVar("pd_poor", 0, {FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY, FCVAR_ARCHIVE}, "Enable/Disable props' poor start")
 
 --[[
     Meta
@@ -45,7 +33,7 @@ function PD.Trace(ent)
         filter = ent
     })
 
-    return startpos.z, tr.HitPos.z, tr.Entity
+    return startpos.z, tr.HitPos.z, tr.Entity, tr.HitWorld
 end
 
 function PD.CreateRecovery(ent)
@@ -55,7 +43,7 @@ function PD.CreateRecovery(ent)
         return
     end
 
-    timer.Create("PD Recovery #" .. index, PD.RecoveringDelay, 0, function()
+    timer.Create("PD Recovery #" .. index, 3, 0, function()
         if not IsValid(ent) or ent:Health() >= ent:GetMaxHealth() or ent:GetDamaged() or not ent:GetStable() then
             timer.Remove("PD Recovery #" .. index)
             return
@@ -71,31 +59,19 @@ end
 function PD.CreateStability(ent)
     local index = ent:EntIndex()
 
-    timer.Create("PD Stability #" .. index, PD.RecoveringDelay, 0, function()
+    timer.Create("PD Stability #" .. index, 1, 0, function()
         if not IsValid(ent) then
             timer.Remove("PD Stability #" .. index)
             return
         end
 
-        local destructible = {}
-        local near = ents.FindInBox(ent:OBBMins() + Vector(20, 20, 20), ent:OBBMaxs() + Vector(20, 20, 20))
-
-        for i = 1, #near do
-            if near[i] == ent then
-                continue
-            end
-
-            if near[i]:IsDestructible() then
-                destructible[#destructible + 1] = near[i]
-            end
+        local z, zh, hit, world = PD.Trace(ent)
+        if not world and not hit:IsDestructible() and not hit:IsPlayer() then
+            ent:SetStable(false)
+            return
         end
 
-        if #destructible == 0 then
-            local z, zh, hit = PD.Trace(ent)
-            ent:SetStable(z - zh < PD.StabilityDistance)
-        else
-            ent:SetStable(#destructible > 0)
-        end
+        ent:SetStable(z - zh < 40)
     end)
 end
 
@@ -104,15 +80,15 @@ end
 ]]
 
 hook.Add("PlayerSpawnedProp", "Prop Destruction", function(pl, mdl, ent)
-    if not PD.Enabled or not ent:IsDestructible() then
+    if not GetConVar("pd_enabled"):GetBool() or not ent:IsDestructible() then
         return
     end
 
     ent:SetMaxHealth(ent:GetMaxStrength())
     
-    if PD.Poor then
+    if GetConVar("pd_poor"):GetBool() then
         ent:SetHealth(1)
-        timer.Simple(PD.RecoveringDelay, function()
+        timer.Simple(3, function()
             if not IsValid(ent) then
                 return
             end
@@ -127,11 +103,15 @@ hook.Add("PlayerSpawnedProp", "Prop Destruction", function(pl, mdl, ent)
 end)
 
 hook.Add("EntityTakeDamage", "Prop Destruction", function(target, dmginfo)
-    if not PD.Enabled or not target:IsDestructible() or target:GetMaxHealth() <= 1 then
+    if not GetConVar("pd_enabled"):GetBool() or not target:IsDestructible() or target:GetMaxHealth() <= 1 then
         return
     end
 
     target:SetHealth(target:Health() - dmginfo:GetDamage())
+
+    if timer.Exists("PD Recovery #" .. target:EntIndex()) then
+        timer.Remove("PD Recovery #" .. target:EntIndex())
+    end
 
     if target:Health() <= 0 then
         if target:GetMaxHealth() >= 45 then
@@ -150,10 +130,14 @@ hook.Add("EntityTakeDamage", "Prop Destruction", function(target, dmginfo)
         end
     end
 
-    if PD.Recovering then
+    if GetConVar("pd_recovering"):GetBool() then
+        if timer.Exists("PD Recovery Try #" .. target:EntIndex()) then
+            timer.Remove("PD Recovery Try #" .. target:EntIndex())
+        end
+
         target:SetDamaged(true) -- Make sure last recovering proccess has ended
-        timer.Simple(PD.RecoveringRevive, function()
-            if IsValid(target) then
+        timer.Create("PD Recovery Try #" .. target:EntIndex(), 22, 1, function()
+            if IsValid(target) and target:GetDamaged() then
                 target:SetDamaged(false)
                 PD.CreateRecovery(target)
             end
