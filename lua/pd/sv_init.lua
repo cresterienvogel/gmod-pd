@@ -66,11 +66,6 @@ function PD.CreateStability(ent)
         end
 
         local z, zh, hit, world = PD.Trace(ent)
-        if not world and not hit:IsDestructible() and not hit:IsPlayer() then
-            ent:SetStable(false)
-            return
-        end
-
         ent:SetStable(z - zh < 40)
     end)
 end
