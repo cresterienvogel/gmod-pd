@@ -66,7 +66,11 @@ function PD.CreateStability(ent)
         end
 
         local z, zh, hit, world = PD.Trace(ent)
-        ent:SetStable(z - zh < 40)
+        if not world and not hit:GetStable() then
+            ent:SetStable(false)
+        else
+            ent:SetStable(z - zh < 40)
+        end
     end)
 end
 
