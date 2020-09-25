@@ -38,7 +38,6 @@ end
 
 function PD.CreateRecovery(ent)
     local index = ent:EntIndex()
-
     if timer.Exists("PD Recovery #" .. index) then
         return
     end
@@ -58,7 +57,6 @@ end
 
 function PD.CreateStability(ent)
     local index = ent:EntIndex()
-
     timer.Create("PD Stability #" .. index, 1, 0, function()
         if not IsValid(ent) then
             timer.Remove("PD Stability #" .. index)
