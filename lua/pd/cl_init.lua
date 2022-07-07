@@ -28,7 +28,7 @@ hook.Add("HUDPaint", "Prop Destruction", function()
 			return
 		end
 
-		PrettyText("Health: " .. math.Round(ent:Health()) .. "/" .. math.Round(ent:GetMaxHealth()), "pd_hud", ScrW() / 2, ScrH() / 1.85 + 20, color_white, TEXT_ALIGN_CENTER)
+		PrettyText("Durability: " .. math.Round(ent:Health()) .. "/" .. math.Round(ent:GetMaxHealth()), "pd_hud", ScrW() / 2, ScrH() / 1.85 + 20, color_white, TEXT_ALIGN_CENTER)
 		PrettyText(ent:GetStable() and "Stable" or "Unstable", "pd_hud", ScrW() / 2, ScrH() / 1.85 + 45, HSVToColor(ent:GetStable() and 140 or -20, 1, 1), TEXT_ALIGN_CENTER)
 	end
 end)
